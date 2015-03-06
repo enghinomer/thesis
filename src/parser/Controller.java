@@ -78,6 +78,8 @@ public class Controller {
     HashMap<String, Double> dataSetWordsMap;
     HashMap<String, Double> hashTagsMap;
     HashMap<String, Double> stopWordsMap;
+    HashMap<String, Integer> tfMap;
+    HashMap<String, Integer> occurenceMap;
     protected static SpellDictionaryHashMap dictionary = null;
     protected static SpellChecker spellChecker = null;
 
@@ -970,6 +972,8 @@ public class Controller {
     
     public void createTDIDF() throws SQLException{
     
+        numberOfOccurence();
+        printMap(occurenceMap);
         int count = 0;
         HashMap<String, ArrayList<Double>> tfidfMap = new HashMap<>();
         Statement st = con.createStatement();
@@ -985,14 +989,21 @@ public class Controller {
             text = removeRetweetTag(text);
             text = removeUrl(text);
             words = lemmatize(text);
-            
+            words = removeWordsWithSpecialCharachters(words);
             computeTF( words);
-        }
+            for (Map.Entry<String, Integer> entry : tfMap.entrySet()) {
+                int tf = entry.getValue();
+                System.out.println("tf= "+entry.getKey());
+                int tdf = occurenceMap.get(entry.getKey());
+                System.out.println("tdf= "+tdf);
+            } 
+        }   
     }
     
     public void computeTF( ArrayList<String> document){
     
-        HashMap<String, Integer> tfMap = new HashMap<>();
+        tfMap = new HashMap<>();
+        tfMap.clear();
         for(int i =0; i<document.size(); i++){
                 if(tfMap.containsKey(document.get(i))){
                     int frequency = tfMap.get(document.get(i));
@@ -1001,34 +1012,39 @@ public class Controller {
                 }else
                     tfMap.put(document.get(i), 1);
             }
-        printMap(tfMap);
     }
     
-    public int numberOfOccurence(String word) throws SQLException{
+    public void numberOfOccurence() throws SQLException{
     
-        HashMap<String, Integer> occurenceMap = new HashMap<>();
-        int number = 0;
+        int count = 0;
+        occurenceMap = new HashMap<>();
+        HashMap<String, Integer> uniqueWordsMap = new HashMap<>();
         Statement st = con.createStatement();
         String sql = ("Select text FROM Tweet_ProISIS");
         ResultSet rs = st.executeQuery(sql);
         while(rs.next()){
+            System.out.println(count);count++;
             ArrayList<String> words = new ArrayList<>();
             String text = rs.getString("text");
             text = text.toLowerCase();
             text = removeRetweetTag(text);
             text = removeUrl(text);
             words = lemmatize(text);
-            words = this.removeWordsWithSpecialCharachters(words);
-            for(int i =0; i<words.size(); i++){
-                if(occurenceMap.containsKey(words.get(i))){
-                    number ++;
-                    int frequency = occurenceMap.get(words.get(i));
+            for(int i =0; i<words.size(); i++)
+                uniqueWordsMap.put(words.get(i), 0);
+            
+            for (Map.Entry<String, Integer> entry : uniqueWordsMap.entrySet()) {
+                String key = entry.getKey();
+                if(occurenceMap.containsKey(key)){
+                    int frequency = occurenceMap.get(key);
                     frequency ++;
-                    occurenceMap.put(words.get(i), frequency);
+                    occurenceMap.put(key, frequency);
                 }
+                else
+                    occurenceMap.put(key, 1);
             }
+            uniqueWordsMap.clear();
         }
-        return number;
     }
     
     public ArrayList lemmatize(String text){
