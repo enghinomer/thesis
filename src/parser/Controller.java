@@ -82,6 +82,7 @@ public class Controller {
     HashMap<String, Integer> occurenceMap;
     protected static SpellDictionaryHashMap dictionary = null;
     protected static SpellChecker spellChecker = null;
+    int numberOfTweets;
 
     public Controller()  {
         /*try {
@@ -993,9 +994,10 @@ public class Controller {
             computeTF( words);
             for (Map.Entry<String, Integer> entry : tfMap.entrySet()) {
                 int tf = entry.getValue();
-                System.out.println("tf= "+entry.getKey());
-                int tdf = occurenceMap.get(entry.getKey());
-                System.out.println("tdf= "+tdf);
+                System.out.println(entry.getKey());
+                System.out.println(entry.getValue());
+                int occurence = occurenceMap.get(entry.getKey());
+                System.out.println("idf= "+Math.log10(numberOfTweets/occurence));
             } 
         }   
     }
@@ -1016,14 +1018,14 @@ public class Controller {
     
     public void numberOfOccurence() throws SQLException{
     
-        int count = 0;
+        numberOfTweets = 0;
         occurenceMap = new HashMap<>();
         HashMap<String, Integer> uniqueWordsMap = new HashMap<>();
         Statement st = con.createStatement();
         String sql = ("Select text FROM Tweet_ProISIS");
         ResultSet rs = st.executeQuery(sql);
         while(rs.next()){
-            System.out.println(count);count++;
+            System.out.println(numberOfTweets);numberOfTweets++;
             ArrayList<String> words = new ArrayList<>();
             String text = rs.getString("text");
             text = text.toLowerCase();
