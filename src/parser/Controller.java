@@ -911,6 +911,7 @@ public class Controller {
         ResultSet rs = st.executeQuery(sql);
         while(rs.next()){
              String text = rs.getString("text");
+             System.out.println(text);
              sentiment += sentiment(text);
              count++;
              System.out.println(count);
@@ -1152,6 +1153,7 @@ public class Controller {
 
             }
         }
+        //System.out.println(mainSentiment);
         return mainSentiment;
     }
     
