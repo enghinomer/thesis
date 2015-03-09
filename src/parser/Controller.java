@@ -80,6 +80,7 @@ public class Controller {
     HashMap<String, Double> stopWordsMap;
     HashMap<String, Integer> tfMap;
     HashMap<String, Integer> occurenceMap;
+    HashMap<String, Integer> TFIDFMap = new HashMap<>();
     protected static SpellDictionaryHashMap dictionary = null;
     protected static SpellChecker spellChecker = null;
     int numberOfTweets;
@@ -995,11 +996,32 @@ public class Controller {
             for (Map.Entry<String, Integer> entry : tfMap.entrySet()) {
                 int tf = entry.getValue();
                 System.out.println(entry.getKey());
-                System.out.println(entry.getValue());
+                System.out.println("tf= "+entry.getValue());
                 int occurence = occurenceMap.get(entry.getKey());
-                System.out.println("idf= "+Math.log10(numberOfTweets/occurence));
+                System.out.println("Occurence= "+occurence);
+                System.out.println("idf= "+Math.log10(36515/(1+occurence)));
+                System.out.println("tf-idf= "+tf*Math.log10(36515/(1+occurence)));
+                int tfIDF =(int) (tf*Math.log10(36515/(1+occurence)));
+                
+                if(TFIDFMap.containsKey(entry.getKey())){
+                    int tfidf = TFIDFMap.get(entry.getKey());
+                    tfidf += tfIDF;
+                    TFIDFMap.put(entry.getKey(), tfidf);
+                }else{
+                    TFIDFMap.put(entry.getKey(), tfIDF);
+                }
             } 
-        }   
+        } 
+        
+        for (Map.Entry<String, Integer> entry : occurenceMap.entrySet()){
+            if(TFIDFMap.containsKey(entry.getKey())){
+                int realTfidf = TFIDFMap.get(entry.getKey());
+                realTfidf = realTfidf/entry.getValue();
+                TFIDFMap.put(entry.getKey(), realTfidf);
+            }
+        }
+        TFIDFMap = sortByComparator(TFIDFMap, true);
+        printMap(TFIDFMap);
     }
     
     public void computeTF( ArrayList<String> document){

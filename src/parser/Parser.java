@@ -39,7 +39,7 @@ public class Parser {
             
             
             Controller myController = new Controller();
-            myController.createTDIDF();
+            //myController.createTDIDF();
             //myController.createSentimentVector();
             //myController.createTimeVector();
             //myController.createPunctuationVector();
@@ -53,7 +53,7 @@ public class Parser {
             //String line = jazzySpellChecker.getCorrectedLine("shd we go 2 yr house den ?");
             //System.out.println(line);
             //myController.spellingChecker();
-            //myController.lemmatize("can't \"sdgfs\" fd8489 df;' sefrwe!!!");
+            //myController.lemmatize("fighting scared");
             // myController.sentiment("I am sad");
             //myController.selectRetweets();
             //myController.hashTagsFrequencies();
