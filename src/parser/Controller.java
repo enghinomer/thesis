@@ -78,6 +78,8 @@ public class Controller {
     HashMap<String, Double> dataSetWordsMap;
     HashMap<String, Double> hashTagsMap;
     HashMap<String, Double> stopWordsMap;
+    HashMap<String, Double > punctuationsMap;
+     HashMap<String, Integer > timeMap;
     HashMap<String, Integer> tfMap;
     HashMap<String, Integer> occurenceMap;
     HashMap<String, Integer> TFIDFMap = new HashMap<>();
@@ -92,16 +94,7 @@ public class Controller {
         } catch (LangDetectException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }*/
-           
-        /*try {
-            writer = new PrintWriter("/home/enghin/Documents/analysis/RadicalWords.txt", "UTF-8");
-        } catch (FileNotFoundException ex) {
-            Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (UnsupportedEncodingException ex) {
-            Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
-        }*/
-
-
+        
         String url = "jdbc:mysql://localhost:3306/DataSet";
         String utf = "?useUnicode=yes&characterEncoding=UTF-8";
         String user = "root";
@@ -124,6 +117,16 @@ public class Controller {
 
         } catch (SQLException ex) {
 
+        }
+    }
+    
+    public void openWiter(){
+        try {
+            writer = new PrintWriter("/home/enghin/Documents/analysis/velocityThinkagain_DOS .txt", "UTF-8");
+        } catch (FileNotFoundException ex) {
+            Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (UnsupportedEncodingException ex) {
+            Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -301,13 +304,14 @@ public class Controller {
     public void selectRetweets() {
 
         int count = 0;
-        String sql = "SELECT distinct text FROM tbl_Tweet WHERE is_retweet = 1";
+        String sql = "SELECT distinct text FROM tbl_Tweet WHERE user_id = 2228393197";
         try {
             PreparedStatement preparedStatement = con.prepareStatement(sql);
             ResultSet rs = preparedStatement.executeQuery(sql);
 
             while (rs.next()) {
                 writer.println("**************************");
+                writer.flush();
                 System.out.println(""+count);
                 String text = rs.getString("text");
                 //System.out.println(" " + text);
@@ -322,20 +326,27 @@ public class Controller {
 
     public void getRetweets(String text) throws SQLException {
 
+        //1611738164 1980Gheed
+        //742143 BBCWorld
+        //2228393197 Thinkagain_DOS 
         ArrayList<Long> seconds = new ArrayList<>();
-        Statement st = con.createStatement();
-        //System.out.println(text);
+        PreparedStatement pstmt = con.prepareStatement(
+        "SELECT * FROM tbl_Tweet WHERE text like ?");
+        pstmt.setString(1, "%" + text + "%");
+        System.out.println(text);
         writer.println(text);
-        text = text.replaceAll("\'", "%");
+        writer.flush();
+       // text = text.replaceAll("\'", "%");
        // String sql = ("Select text FROM tbl_Tweet WHERE is_retweet = 1 AND text LIKE  \'%" + ": "+text + "\'");
-        String sql = ("Select text, created_at FROM tbl_Tweet WHERE is_retweet = 1 AND text =  \'" +text + "\'");
+        //String sql = ("Select text, created_at FROM tbl_Tweet WHERE  is_retweet = 1 AND text =  \'" +text + "\'");
         //System.out.println(sql);
-        ResultSet rs = st.executeQuery(sql);
+        ResultSet rs = pstmt.executeQuery();
         while (rs.next()) {
             String reText = rs.getString("text");
             String createdAt = rs.getString("created_at");
             //System.out.println(createdAt);
             writer.println(createdAt);
+            writer.flush();
             try {
                 Calendar cal = Calendar.getInstance();
                 //Date date = formatter.parse(createdAt);
@@ -346,7 +357,7 @@ public class Controller {
             }
         }
         if(!seconds.isEmpty()){
-        compute24hAgingFactor(seconds);
+        compute1hAgingFactor(seconds);
         seconds.clear();
         }
     }
@@ -371,6 +382,7 @@ public class Controller {
         //System.out.println("l= "+ l);
         //System.out.println("A= "+ a);
         writer.println("1hAgingFactor = "+a);
+        writer.flush();
         return k/(k+l);
     }
     
@@ -657,18 +669,88 @@ public class Controller {
                  }
     }
     
-    public void createFunctionWordsVector() throws SQLException{
+    public void createVectors() throws SQLException, IOException, java.text.ParseException{
+        writer.append("@relation userprofile");
+        writer.append('\n');
+        writer.append('\n');
+        //put the function words into a hash map for later processing
+        functionWordsFromFile("/home/enghin/Documents/analysis/functionWords.txt");
+        //write function words attributes to weka file
+        printMap(functionWordsMap);
+        //put the frequent words into a hash map for later processing
+        dataSetWordsFromFile("/home/enghin/Documents/analysis/RadicalWords.txt");
+        //write frequent words attributes to weka file
+        writeDataSetToWekaFile(dataSetWordsMap);
+        //put the hash tags into a file for later processing
+        hashTagsFromFile("/home/enghin/Documents/analysis/HashTags.txt");
+        //write hash tags attributes to weka file
+        writeHAshTagsToWekaFile(hashTagsMap);
+        //create punctuation map
+        punctuationMap();
+        //write punctuation to weka file
+        writePunctuationToWeka(punctuationsMap);
+        //create time map
+        timeMap();
+        //write time to weka file
+        writeTimeToWeka(timeMap);
+        //write sentiment to weka file
+        writeAttributestoWekaFile("SENTIMENT");
+        writeAttributestoWekaFile("CLASS");
+        writer.append('\n');
+        writer.append('\n');
+        writer.append("@data");
+        writer.append('\n');
+        writer.flush();
+        
+        int count = 0;
     
-        HashMap<String, Double> functionWordVector = new HashMap<>();
-        int numberOfFunctionWords = 0;
-        functionWordVector.putAll(functionWordsMap);
         Statement st = con.createStatement();
-        String sql = ("Select text FROM Tweet_ProISIS");
+        String sql = ("Select text, created_at FROM Random");
         ResultSet rs = st.executeQuery(sql);
         while(rs.next()){
         
+            System.out.println(count++);
             String text = rs.getString("text");
             System.out.println(text);
+            String createdAt = rs.getString("created_at");
+            
+            createFunctionWordsFeature(text);
+            createDataSetWordsFeature(text);
+            createHashTagsFeature(text);
+            createPunctuationFeature(text);
+            createTimeFeature(createdAt);
+            sentimentFeature(text);
+            writer.append("0");
+            writer.append('\n');
+            writer.flush();
+        }
+        
+        String sql1 = ("Select text, created_at FROM Tweet_ProISIS");
+        ResultSet rs1 = st.executeQuery(sql1);
+        while(rs1.next()){
+        
+            System.out.println(count++);
+            String text = rs1.getString("text");
+            System.out.println(text);
+            String createdAt = rs1.getString("created_at");
+            
+            createFunctionWordsFeature(text);
+            createDataSetWordsFeature(text);
+            createHashTagsFeature(text);
+            createPunctuationFeature(text);
+            createTimeFeature(createdAt);
+            sentimentFeature(text);
+            writer.append("1");
+            writer.append('\n');
+            writer.flush();
+        }
+    }
+    
+    public void createFunctionWordsFeature(String text){
+        HashMap<String, Double> functionWordVector = new HashMap<>();
+        int numberOfFunctionWords = 0;
+        functionWordVector.putAll(functionWordsMap);
+        
             text = text.toLowerCase();
             ArrayList<String> words = lemmatize(text);
             words = removeWordsWithSpecialCharachters(words);
@@ -691,26 +773,17 @@ public class Controller {
                     functionWordVector.put(key, 0.0);
             }
             
-            numberOfFunctionWords = 0;
-            printMap(functionWordVector);
+            //numberOfFunctionWords = 0;
+            writeValuesToWekaFile(functionWordVector);
             functionWordVector.clear();
-            functionWordVector.putAll(functionWordsMap);
-        }
+            //functionWordVector.putAll(functionWordsMap);
     }
     
-    public void createDataSetWordsVector() throws SQLException{
-    
+    public void createDataSetWordsFeature(String text){
         HashMap<String, Double> dataSetWordVector = new HashMap<>();
         int numberOfDataSetWords = 0;
         dataSetWordVector.putAll(dataSetWordsMap);
-        Statement st = con.createStatement();
-        String sql = ("Select text FROM Tweet_ProISIS");
-        ResultSet rs = st.executeQuery(sql);
-        while(rs.next()){
         
-            numberOfDataSetWords = 0;
-            String text = rs.getString("text");
-            System.out.println(text);
             text = text.toLowerCase();
             ArrayList<String> words = lemmatize(text);
             words = this.removeWordsWithSpecialCharachters(words);
@@ -732,13 +805,10 @@ public class Controller {
                     dataSetWordVector.put(key, 0.0);
             }
             
-            printMap(dataSetWordVector);
+           writeValuesToWekaFile(dataSetWordVector);
             dataSetWordVector.clear();
-            dataSetWordVector.putAll(dataSetWordsMap);
-        }
+            //dataSetWordVector.putAll(dataSetWordsMap);
     }
-    
-
     
     public <T> void printMap(HashMap<String,T> map){
     
@@ -753,10 +823,50 @@ public class Controller {
             } 
             //writer.println("Key = " + key);
             //writer.println(values);
+            writeAttributestoWekaFile(key);
             if(values != 0){
                 System.out.println("Key = " + key);
                 System.out.println("Values = " + values );
             }
+        }
+    }
+    
+    public <T> void writeDataSetToWekaFile(HashMap<String,T> map){
+    
+        double values = 0.0;
+        int i = 1;
+        for (Map.Entry<String, T> entry : map.entrySet()) {
+            String key = entry.getKey();
+            writeAttributestoWekaFile("DATASET"+i);
+            i++;
+        }
+    }
+    
+    public <T> void writeHAshTagsToWekaFile(HashMap<String,T> map){
+    
+        double values = 0.0;
+        int i = 1;
+        for (Map.Entry<String, T> entry : map.entrySet()) {
+            String key = entry.getKey();
+            writeAttributestoWekaFile("HASHTAG"+i);
+            i++;
+        }
+    }
+    
+    public <T> void writeValuesToWekaFile(HashMap<String,T> map){
+    
+        double values = 0.0;
+        for (Map.Entry<String, T> entry : map.entrySet()) {
+            String key = entry.getKey();
+            if(entry.getValue() instanceof Double){
+                values = Double.parseDouble(entry.getValue().toString());
+            }    
+            if(entry.getValue() instanceof Integer){
+                values = Integer.parseInt(entry.getValue().toString());
+            } 
+            //writer.println("Key = " + key);
+            //writer.println(values);
+            writer.append(values+",");
         }
     }
     
@@ -821,18 +931,11 @@ public class Controller {
                  }
     }
     
-    public void createHashTagsVector() throws SQLException{
-    
+    public void createHashTagsFeature(String text){
         HashMap<String, Double> hashTagsVector = new HashMap<>();
-        
         hashTagsVector.putAll(hashTagsMap);
-        Statement st = con.createStatement();
-        String sql = ("Select text FROM Tweet_ProISIS");
-        ResultSet rs = st.executeQuery(sql);
-        while(rs.next()){
-            int numberOfHashTags = 0;
-            String text = rs.getString("text");
-            System.out.println(text);
+        int numberOfHashTags = 0;
+        
             ArrayList<String> hashTags = extractHashTag(text);
             for(int i =0; i<hashTags.size(); i++){
                 if(hashTagsVector.containsKey(hashTags.get(i))){
@@ -852,27 +955,24 @@ public class Controller {
                     hashTagsVector.put(key, 0.0);
             }
             
-            printMap(hashTagsVector);
+            writeValuesToWekaFile(hashTagsVector);
             hashTagsVector.clear();
-            hashTagsVector.putAll(hashTagsMap);
-        }
     }
     
-    public void createPunctuationVector() throws SQLException{
-    
+    public void punctuationMap(){
         String punctuations[] = {".",",",";",":","'","-","[","]","{","}","!","?","&"};
-        HashMap<String, Double > punctuationsMap = new HashMap<String, Double >();
+        punctuationsMap = new HashMap<String, Double >();
         
-        Statement st = con.createStatement();
-        String sql = ("Select text FROM Tweet_ProISIS");
-        ResultSet rs = st.executeQuery(sql);
-        while(rs.next()){
-            for(int i=0;i<punctuations.length;i++)
+        for(int i=0;i<punctuations.length;i++)
                 punctuationsMap.put(punctuations[i], 0.0);
+    }
+    
+    public void createPunctuationFeature(String text) throws SQLException{
+    
+        punctuationMap();
+        
             
             int numberOfPunctuation = 0;
-            String text = rs.getString("text");
-            System.out.println(text);
             text = text.toLowerCase();
             text = removeRetweetTag(text);
             text = replaceHTMLTags(text);
@@ -897,9 +997,9 @@ public class Controller {
                     punctuationsMap.put(key, 0.0);
             }
             
-            printMap(punctuationsMap);
+            writeValuesToWekaFile(punctuationsMap);
             punctuationsMap.clear();
-        }
+        
     }
     
     public void createSentimentVector() throws SQLException{
@@ -912,7 +1012,7 @@ public class Controller {
         while(rs.next()){
              String text = rs.getString("text");
              System.out.println(text);
-             sentiment += sentiment(text);
+             sentiment += sentimentFeature(text);
              count++;
              System.out.println(count);
         }
@@ -920,23 +1020,20 @@ public class Controller {
         System.out.println(sentiment);
     }
     
-    public void createTimeVector() throws SQLException, java.text.ParseException{
-    
+    public void timeMap(){
         String labels[] = {"Hour","Period1","Period2","Period3","Period4",
                             "Monday","Tuesday","Wednesday","Thursday",
                             "Friday","Saturday","Sunday","Weekday","Weekend"};
-        HashMap<String, Integer > timeMap = new HashMap<String, Integer >();
+         timeMap = new HashMap<String, Integer >();
         
-        Statement st = con.createStatement();
-        String sql = ("Select created_at, text FROM Tweet_ProISIS");
-        ResultSet rs = st.executeQuery(sql);
-        while(rs.next()){
             for(int i=0;i<labels.length;i++)
                 timeMap.put(labels[i], 0);
-            
-            String text = rs.getString("text");
-            String createdAt = rs.getString("created_at");
-            System.out.println(text);
+    }
+    
+    public void createTimeFeature(String createdAt) throws SQLException, java.text.ParseException{
+    
+            timeMap();
+        
             System.out.println(createdAt);
             
             Calendar cal = Calendar.getInstance();
@@ -969,8 +1066,9 @@ public class Controller {
                 case 7: timeMap.put("Saturday", 1);
                         timeMap.put("Weekend", 1);break;
             }
-            printMap(timeMap);
-        }
+            
+            writeValuesToWekaFile(timeMap);
+            timeMap.clear();
     }
     
     public void createTDIDF() throws SQLException{
@@ -1120,7 +1218,7 @@ public class Controller {
         return text;
     }
     
-    public int sentiment(String text){
+    public int sentimentFeature(String text){
         /*case 0:
             return "Negative";
         case 1:
@@ -1153,7 +1251,11 @@ public class Controller {
 
             }
         }
-        //System.out.println(mainSentiment);
+        System.out.println(mainSentiment);
+        writer.append(mainSentiment+",");
+        //writer.append('\n');
+        //writer.flush();
+        
         return mainSentiment;
     }
     
@@ -1212,5 +1314,54 @@ public class Controller {
             }
         }
         return text;
+    }
+    
+    public <T> void writePunctuationToWeka(HashMap<String,T> map){
+        for (Map.Entry<String, T> entry : map.entrySet()) {
+            String key = entry.getKey();
+            if(key.equals("!"))
+                writeAttributestoWekaFile("EXCLAMATION");
+            if(key.equals("&"))
+                writeAttributestoWekaFile("AND");
+            if(key.equals("'"))
+                writeAttributestoWekaFile("QUOTE");
+            if(key.equals(","))
+                writeAttributestoWekaFile("COMMA");
+            if(key.equals("-"))
+                writeAttributestoWekaFile("DASH");
+            if(key.equals("."))
+                writeAttributestoWekaFile("DOT");
+            if(key.equals(":"))
+                writeAttributestoWekaFile("DOUBLEDOT");
+            if(key.equals(";"))
+                writeAttributestoWekaFile("DOTCOMMA");
+            if(key.equals("["))
+                writeAttributestoWekaFile("OPENSQUARE");
+            if(key.equals("{"))
+                writeAttributestoWekaFile("OPENBRACE");
+            if(key.equals("]"))
+                writeAttributestoWekaFile("CLOSESQUARE");
+            if(key.equals("}"))
+                writeAttributestoWekaFile("CLOSEBRACE");
+            if(key.equals("?"))
+                writeAttributestoWekaFile("QUESTION");
+            
+        }
+    }
+    
+    public <T> void writeTimeToWeka(HashMap<String,T> map){
+        for (Map.Entry<String, T> entry : map.entrySet()) {
+            String key = entry.getKey();
+                writeAttributestoWekaFile(key);
+        }
+    }
+    
+    public void writeAttributestoWekaFile(String text){
+    
+        //writer.append("@relation userprofile");
+        
+        writer.append("@attribute  "+text+"  numeric");
+        writer.append('\n');
+        writer.flush();
     }
 }
