@@ -122,7 +122,7 @@ public class Controller {
     
     public void openWiter(){
         try {
-            writer = new PrintWriter("/home/enghin/Documents/analysis/velocityThinkagain_DOS .txt", "UTF-8");
+            writer = new PrintWriter("/home/enghin/Documents/analysis/test.txt", "UTF-8");
         } catch (FileNotFoundException ex) {
             Logger.getLogger(Controller.class.getName()).log(Level.SEVERE, null, ex);
         } catch (UnsupportedEncodingException ex) {
@@ -705,7 +705,7 @@ public class Controller {
         int count = 0;
     
         Statement st = con.createStatement();
-        String sql = ("Select text, created_at FROM Random");
+        String sql = ("Select text, created_at FROM Tweet_AgainstISIS");
         ResultSet rs = st.executeQuery(sql);
         while(rs.next()){
         

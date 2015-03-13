@@ -40,6 +40,7 @@ public class Parser {
             
             Controller myController = new Controller();
             myController.openWiter();
+            myController.createVectors();
             //myController.createTDIDF();
             //myController.createSentimentVector();
             //myController.createTimeVector();
@@ -56,7 +57,7 @@ public class Parser {
             //myController.spellingChecker();
             //myController.lemmatize("fighting scared");
             // myController.sentiment("I am sad");
-            myController.selectRetweets();
+            //myController.selectRetweets();
             //myController.hashTagsFrequencies();
             //try {
             //myController.takeStopWords();
@@ -70,7 +71,7 @@ public class Parser {
             //myController.insertTweet("من نحن :)", " من نحن", "من نحن  ", "من نحن", "من نحن", "من نحن", 1, "من نحن");
             //myController.tryHash();
             //myController.functionWordsFromFile("/home/enghin/Documents/analysis/functionWords.txt");
-            //myController.createVectors();
+            //
             //myController.dataSetWordsFromFile("/home/enghin/Documents/analysis/RadicalWords.txt");
             //myController.createDataSetWordsVector();
             //myController.hashTagsFromFile("/home/enghin/Documents/analysis/HashTags.txt");
